@@ -9,33 +9,80 @@
 
 
 
-
-template<typename T, size_t ReserveStep=1>
+template<typename T, size_t BufferSize=1>
 struct CustomAllocator
 {
 
     using value_type = T;
+    //
+    using Buffers = std::vector<Buffer<T> >;
+    //
 
     CustomAllocator() {}
+    ~CustomAllocator() = default;
 
 
     template<typename U>
     struct rebind {
-        using other = CustomAllocator<U, ReserveStep>;
+        using other = CustomAllocator<U, BufferSize>;
     };
 
 
-    T *allocate([[gnu::unused]] std::size_t n)
+    T *allocate(std::size_t n)
     {
-        auto p = _buffers.createNextBufItem();
-        //std::cout << "--- ALLOCATE ---" << p << std::endl;
+
+        T *p = nullptr;
+
+        if (_buffers.empty())
+            appendBuffer();
+
+        size_t countToAlloc = n;
+
+        while(true)
+        {
+            auto& buffer = _buffers.back();
+
+            size_t cAvailible = buffer.capacity() - buffer.size();
+
+            auto buf = buffer.push( cAvailible <= countToAlloc ? cAvailible: countToAlloc );
+
+            if (!p) //will return only first allocated mem pointer
+                p = buf;
+
+            if (countToAlloc <= cAvailible)
+                break;
+
+            countToAlloc -= cAvailible;
+            appendBuffer();
+        }
+
         return p;
     }
 
-    void deallocate(T *p, [[gnu::unused]] std::size_t n)
+    void appendBuffer()
     {
-        //std::cout << "--- DEALLOCATE ---" << " p = " << p << std::endl;
-        _buffers.removeBufItem(p);
+        _buffers.emplace_back(BufferSize);
+    }
+
+
+    void deallocate(T *p, std::size_t n)
+    {
+        //std::cout << "--- DEALLOCATE ---" << " p = " << p << " n = " << n << std::endl;
+
+        auto iter = std::find_if(_buffers.begin(), _buffers.end(), [&](const auto& buf) { return buf.contains(p); } );
+        if (iter == _buffers.end())
+            return;
+
+        iter->pop(n);
+
+        removeEmptyBuffers();
+    }
+
+
+    void removeEmptyBuffers()
+    {
+        auto iter = std::remove_if(_buffers.begin(), _buffers.end(), [&](auto& buf) { return buf.empty();} );
+        _buffers.erase(iter, _buffers.end());
     }
 
 
@@ -53,9 +100,29 @@ struct CustomAllocator
         p->~U();
     }
 
-private:
+    T* operator[](size_t i) const
+    {
+        T* p = nullptr;
 
-    PoolBuffers<T, ReserveStep> _buffers;
+        size_t indexBuf = i / BufferSize;
+        size_t offset =  i % BufferSize;
+
+        if (_buffers.size() < indexBuf + 1)
+            return p;
+
+        //const auto &buf = _buffers[indexBuf];
+        p = _buffers[indexBuf][offset];
+        return p;
+    }
+
+    auto at(size_t i) const
+    {
+        return operator[](i);
+    }
+
+private:
+    Buffers _buffers;
+
 };
 
 

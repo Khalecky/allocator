@@ -25,7 +25,7 @@ struct Hard
 
     Hard(Hard&& inst) /*noexcept*/: fa(inst.fa), fi(inst.fi) {}
 
-    ~Hard() {}
+    ~Hard() = default;
 };
 
 
@@ -41,7 +41,9 @@ int main()
             m.emplace(std::piecewise_construct, std::forward_as_tuple(i), std::forward_as_tuple(fa, fi));
         }
     }
+
     //
+
     {
         auto m = std::map<int, Hard,std::less<int>,  CustomAllocator<std::pair<const int, Hard>, 10> >{};
         for (int i = 0; i < 10; ++i)
@@ -57,9 +59,17 @@ int main()
             const Hard& hard = pair.second;
             std::cout << i << ' ' << hard.fa << ' ' << hard.fi << std::endl;
         }
+
+        //inducing expansion
+        auto fa = getFact(10);
+        auto fi = getFib(10);
+        m.emplace(std::piecewise_construct, std::forward_as_tuple(10), std::forward_as_tuple(fa, fi));
+        //
     }
     std::cout << std::endl;
+
     //
+
     auto hards = CustomContainer<Hard, CustomAllocator<Hard, 10> >{};
     for (int i = 0; i < 10; ++i)
     {
@@ -68,8 +78,18 @@ int main()
         hards.push_emplace(fa, fi);
     }
 
-    for(auto hard: hards)
-        std::cout << hard->fa << ' ' << hard->fi << std::endl;
+
+    int i = 0;
+    for(const auto &hard: hards) {
+        std::cout << (i++) << ' ' << hard.fa << ' ' << hard.fi << std::endl;
+    }
+
+
+    //inducing expansion
+    auto fa = getFact(10);
+    auto fi = getFib(10);
+    hards.push_emplace(fa, fi);
+
 
     return 0;
 

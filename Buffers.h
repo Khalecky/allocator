@@ -6,13 +6,13 @@ template<typename T>
 struct Buffer
 {
     T* _ptr = nullptr;
-    size_t _countItems;
-    size_t _currOffset = 0;
+    size_t _capacity = 0;
+    size_t _count = 0;
 
-    Buffer(size_t countItems): _countItems(countItems)
+    Buffer(size_t capacity): _capacity(capacity)
     {
-        //std::cout << "--- BUFFER MALLOC ---" << std::endl;
-        auto p = std::malloc( _countItems * sizeof(T));
+        //std::cout << "--- BUFFER MALLOC ---" << _capacity <<std::endl;
+        auto p = std::malloc( _capacity * sizeof(T));
         if (!p)
             throw std::bad_alloc();
         _ptr = reinterpret_cast<T*>(p);
@@ -24,7 +24,7 @@ struct Buffer
         std::free(_ptr);
     }
 
-    Buffer(const Buffer& other): _countItems(other._countItems)
+    Buffer(const Buffer& other): _capacity(other._capacity)
     {
         //std::cout << __PRETTY_FUNCTION__ << std::endl;
     }
@@ -33,104 +33,71 @@ struct Buffer
     {
         //std::cout << __PRETTY_FUNCTION__ << std::endl;
         std::swap(_ptr, other._ptr);
-        _countItems = other._countItems;
+        _capacity = other._capacity;
         return *this;
     }
 
-    Buffer(Buffer&& other) noexcept: _countItems(other._countItems)
+    Buffer(Buffer&& other) noexcept: _capacity(other._capacity)
     {
         //std::cout << __PRETTY_FUNCTION__ << std::endl;
         std::swap(_ptr, other._ptr);
     }
 
-    T* endBufItem() const
+    T* endBlock() const
     {
-        return _ptr + _countItems;
+        return _ptr + _capacity;
     }
 
-    T* nextBufItem()
+
+    T* push(size_t nBlocks = 1)
     {
         T* p = nullptr;
-        if (_currOffset < _countItems)
-            p = _ptr + _currOffset;
+        if (_count >= _capacity)
+            return p;
 
-        ++_currOffset;
+        p = _ptr + _count;
+        _count += nBlocks;
         return p;
     }
 
-    bool contains(const T* bufItem) const
+    void pop(size_t nBlocks)
     {
-        return bufItem >= _ptr &&  bufItem < endBufItem()   //check: item is in range
-                && (bufItem - _ptr) % sizeof(T) == 0;       //and items offset is integer
+        if (nBlocks > _count)
+            return;
+
+        _count -= nBlocks;
     }
+
+
+    auto capacity() const
+    {
+        return _capacity;
+    }
+
+    auto size() const
+    {
+        return _count;
+    }
+
+
+    bool contains(const T* block) const
+    {
+        return block >= _ptr &&  block < endBlock()   //check: block is in range
+                && (block - _ptr) % sizeof(T) == 0;       //and blocks offset is integer
+    }
+
+    T* operator[](size_t i) const
+    {
+        return _ptr + i;
+    }
+
 
     bool empty() const
     {
-        return _countItems == 0;
+        return _count == 0;
     }
-
-    //before remove need to check contains!!!
-    void removeLastItem()
-    {
-        --_currOffset;
-        -- _countItems;
-    }
-};
-
-template<typename T, size_t BufferSize>
-class PoolBuffers
-{
-    using Buffers = std::vector<Buffer<T> >;
-    using BufAllocIter = typename Buffers::iterator;
-
-    Buffers _buffers;
-
-
-    bool empty()
-    {
-        return _buffers.empty();
-    }
-
-    void insertBuffer()
-    {
-        _buffers.emplace_back(BufferSize);
-    }
-
-
-public:
-
-    T* createNextBufItem()
-    {
-        if (_buffers.empty())
-            insertBuffer();
-
-        auto& buffer = _buffers.back();
-
-        T* newItem = buffer.nextBufItem();
-        if (!newItem)
-        {
-            insertBuffer();
-            auto& buffer = _buffers.back();
-            newItem = buffer.nextBufItem();
-        }
-        return newItem;
-    }
-
-    void removeBufItem(T* bufItem)
-    {
-        BufAllocIter iter = std::find_if(_buffers.begin(), _buffers.end(), [&](const auto& buf) { return buf.contains(bufItem); } );
-
-        if (iter != _buffers.end())
-        {
-            iter->removeLastItem();
-            if (iter->empty())
-                _buffers.erase(iter);
-        }
-    }
-
 
 
 };
-
 
 #endif // BUFALLOC_H_INCLUDED
