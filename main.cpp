@@ -25,6 +25,11 @@ struct Hard
 
     Hard(Hard&& inst) /*noexcept*/: fa(inst.fa), fi(inst.fi) {}
 
+    void print(int numRow) const
+    {
+        std::cout << numRow << ' ' << fa << ' ' << fi << std::endl;
+    }
+
     ~Hard() = default;
 };
 
@@ -43,7 +48,6 @@ int main()
     }
 
     //
-
     {
         auto m = std::map<int, Hard,std::less<int>,  CustomAllocator<std::pair<const int, Hard>, 10> >{};
         for (int i = 0; i < 10; ++i)
@@ -57,7 +61,7 @@ int main()
         {
             const auto& i = pair.first;
             const Hard& hard = pair.second;
-            std::cout << i << ' ' << hard.fa << ' ' << hard.fi << std::endl;
+            hard.print(i);
         }
 
         //inducing expansion
@@ -69,27 +73,32 @@ int main()
     std::cout << std::endl;
 
     //
-
     auto hards = CustomContainer<Hard, CustomAllocator<Hard, 10> >{};
     for (int i = 0; i < 10; ++i)
-    {
-        auto fa = getFact(i);
-        auto fi = getFib(i);
-        hards.push_emplace(fa, fi);
-    }
-
+        hards.push_emplace(getFact(i), getFib(i));
 
     int i = 0;
-    for(const auto &hard: hards) {
-        std::cout << (i++) << ' ' << hard.fa << ' ' << hard.fi << std::endl;
-    }
-
+    for(const auto &hard: hards)
+        hard.print(i++);
 
     //inducing expansion
-    auto fa = getFact(10);
-    auto fi = getFib(10);
-    hards.push_emplace(fa, fi);
+    hards.push_emplace(getFact(i), getFib(i));
+    //
 
+    /*
+    std::cout << "--------------------" << std::endl;
+    {
+
+        auto hards = CustomContainer<Hard>{};
+        for (int i = 0; i < 10; ++i)
+            hards.push_emplace(getFact(i), getFib(i));
+
+
+        int i = 0;
+        for(const auto &hard: hards)
+            hard.print(i++);
+    }
+    */
 
     return 0;
 

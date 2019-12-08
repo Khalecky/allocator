@@ -8,7 +8,6 @@
 #include "Buffers.h"
 
 
-
 template<typename T, size_t BufferSize=1>
 struct CustomAllocator
 {
@@ -75,13 +74,8 @@ struct CustomAllocator
 
         iter->pop(n);
 
-        removeEmptyBuffers();
-    }
-
-
-    void removeEmptyBuffers()
-    {
-        auto iter = std::remove_if(_buffers.begin(), _buffers.end(), [&](auto& buf) { return buf.empty();} );
+        //removeEmptyBuffers
+        iter = std::remove_if(_buffers.begin(), _buffers.end(), [&](const auto& buf) { return buf.empty();} );
         _buffers.erase(iter, _buffers.end());
     }
 
@@ -98,26 +92,6 @@ struct CustomAllocator
     {
         //std::cout << __PRETTY_FUNCTION__ << std::endl;
         p->~U();
-    }
-
-    T* operator[](size_t i) const
-    {
-        T* p = nullptr;
-
-        size_t indexBuf = i / BufferSize;
-        size_t offset =  i % BufferSize;
-
-        if (_buffers.size() < indexBuf + 1)
-            return p;
-
-        //const auto &buf = _buffers[indexBuf];
-        p = _buffers[indexBuf][offset];
-        return p;
-    }
-
-    auto at(size_t i) const
-    {
-        return operator[](i);
     }
 
 private:

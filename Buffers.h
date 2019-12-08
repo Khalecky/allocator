@@ -20,7 +20,7 @@ struct Buffer
 
     ~Buffer()
     {
-        //std::cout << "--- BUFFER FREE --- " << _ptr << std::endl;
+        std::cout << "--- BUFFER FREE --- " << _ptr << std::endl;
         std::free(_ptr);
     }
 

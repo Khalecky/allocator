@@ -1,39 +1,53 @@
 #ifndef CUSTOMCONTAINER_H_INCLUDED
 #define CUSTOMCONTAINER_H_INCLUDED
 
+#include <algorithm>
 
 template< class T, class Allocator = std::allocator<T> >
 class CustomContainer
 {
+
     Allocator alloc;
-    size_t count = 0;   //counter of objects
+
+    size_t capacity = 1;
+    size_t size = 0;
+
+    T** objects = nullptr;
 
     //
     class Iterator {
 
-        Allocator *pAlloc = nullptr;
+        CustomContainer &owner;
         size_t offset = 0;
 
     public:
-        explicit Iterator(Allocator *alloc, size_t offset_ = 0): pAlloc(alloc), offset(offset_) {}
+        explicit Iterator(CustomContainer &owner_, size_t offset_ = 0): owner(owner_), offset(offset_) {}
 
-        auto operator!=(const Iterator &iter) const { return offset != iter.offset;}
+        auto operator!=(const Iterator &iter) const {
+            return owner.size > 0 && offset != iter.offset;
+        }
+
         auto operator++() { return ++offset; }
-        auto &operator*() const { return *(pAlloc->at(offset));}
+        auto &operator*() const { return *(owner.objects[offset]); }
     };
     //
 
 public:
 
-    CustomContainer() {}
+    CustomContainer() {
+
+        if (!objects)
+            objects = new T* [capacity];
+    }
 
     ~CustomContainer()
     {
-        for (size_t i = 0; i < count; ++i) {
-            alloc.destroy(alloc[i]);
-            alloc.deallocate(alloc[i], 1);
+        for (size_t i = 0; i < size; ++i) {
+            alloc.destroy(objects[i]);
+            alloc.deallocate(objects[i], 1);
         }
 
+        delete[] objects;
     }
 
     template<typename ...Args>
@@ -41,13 +55,25 @@ public:
     {
         T* p = alloc.allocate(1);
         alloc.construct(p, std::forward<Args>(args)...);
-        ++count;
+
+        //append
+        if (size + 1 > capacity) {
+
+            capacity *= 2;
+
+            T** newObjects = new T* [capacity];
+            std::copy(objects, objects + size, newObjects);
+            std::swap(objects, newObjects);
+            delete [] newObjects;
+            //
+        }
+        objects[size++] = p;
     }
 
     //
-    auto begin() { return Iterator{&alloc}; }
+    auto begin() { return Iterator{*this}; }
     auto end() {
-        return Iterator{&alloc, count}; //nullptr
+        return Iterator{*this, size}; //nullptr
     }
 
 
