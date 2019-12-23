@@ -85,7 +85,7 @@ int main()
     hards.push_emplace(getFact(i), getFib(i));
     //
 
-    /*
+
     std::cout << "--------------------" << std::endl;
     {
 
@@ -98,7 +98,7 @@ int main()
         for(const auto &hard: hards)
             hard.print(i++);
     }
-    */
+
 
     return 0;
 

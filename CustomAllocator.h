@@ -43,15 +43,18 @@ struct CustomAllocator
 
             size_t cAvailible = buffer.capacity() - buffer.size();
 
-            auto buf = buffer.push( cAvailible <= countToAlloc ? cAvailible: countToAlloc );
+            if (cAvailible > 0)
+            {
+                auto buf = buffer.push( cAvailible <= countToAlloc ? cAvailible: countToAlloc );
+                if (!p) //will return only first allocated mem pointer
+                    p = buf;
 
-            if (!p) //will return only first allocated mem pointer
-                p = buf;
+                if (countToAlloc <= cAvailible)
+                    break;
 
-            if (countToAlloc <= cAvailible)
-                break;
+                countToAlloc -= cAvailible;
+            }
 
-            countToAlloc -= cAvailible;
             appendBuffer();
         }
 
